@@ -4,22 +4,29 @@ from datetime import date
 import re
 
 print('''
+    
     Welcom to HanYang Bank.
-    You can do following things.
+    은행 서비스 메뉴얼
     ===========================================================
-    1. create table.
-    2. insert User Info, Account Info
-    3. update User Info, Account Info
-    4. delete User Info, Account Info, Manager Info.
-    5. Select User Info, Account Info, Manager Info, Log Info.
+    사용자 모드
+        본인 등록(주민번호, LastName, FamilyName, 생년월일)
+        계좌 생성(계좌번호, 잔고, 주민번호, 비밀번호)
+        입출금
+        잔고 확인
+    관리자 모드(관리자 아이디, 관리자 패스워드)
+        전체 사용자목록 확인
+        전체 계좌목록 확인
+        계좌 삭제
+        입출금 내역 확인
     ===========================================================
+    
     ''')
 
 
 def user_manual():
     print('''
         0. 완료
-        1. 본인 추가
+        1. 본인 등록
         2. 계좌 생성
         3. 입출금
         4. 잔고 확인
@@ -29,7 +36,7 @@ def user_manual():
 
 def admin_manual():
     print('''
-        0. 완료
+        0. 이전 단계
         1. 사용자 목록
         2. 계좌 목록
         3. 계좌 삭제
@@ -186,9 +193,12 @@ class OpenDB:
             cursor.execute(sql)
             self.write_log(cursor, account, cash)
             sql_connector.commit()
-            self.withdraw = False
-            self.deposit = False
-            print("입출금이 완료되었습니다.")
+            if self.deposit == True:
+                print("입금이 완료되었습니다. 현재 잔고는 {}원 입니다.").format(balance)
+                self.deposit = False
+            else:
+                print("출금이 완료되었습니다. 현재 잔고는 {}입니다.").format(balance)
+                self.withdraw = False
             return
         except mysql.connector.Error as error:
             print("Failed updating data into Account table {}".format(error))
@@ -294,19 +304,21 @@ def Admin_Mode(DB):
         admin = cursor.fetchall()
         column = ['ID', 'Password']
         admin = pd.DataFrame(admin, columns=column)
-        print(admin['ID'])
-        print(admin['Password'])
-        counter, i = 3, 1
-        while i <= counter:
+        admin_id = list(admin['ID'])
+        admin_pw = list(admin['Password'])
+        counter, i, auth = 3, 1, False
+        while i <= counter and auth == False:
             ID = input("관리자 아이디 입력: ")
-            PW = input("관리자 암호 입력: ")
-            if ID in admin['ID'] and PW in admin['PassWord']:
-                print("관리자 확인 완료!")
-                break
+            PW = int(input("관리자 암호 입력: "))
+            for id, pw in zip(admin_id, admin_pw):
+                if ID == id and PW == int(pw):
+                    print("관리자 확인 완료!")
+                    auth = True
+                    break
             else:
                 print("아이디 혹은 비밀번호 잘못 입력.")
                 i += 1
-        if i > counter:
+        if auth == False:
             print("접근 권한이 없습니다.")
             return
     except mysql.connector.Error as error:
