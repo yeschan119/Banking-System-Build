@@ -16,14 +16,17 @@ print('''
         계좌 생성
         입출금
         잔고 확인
+        비밀번호 변경
         
     관리자 모드
         전체 사용자목록 확인
         전체 계좌목록 확인
         입출금 내역 확인
+        사용자 정보 삭제
         계좌 삭제
-        관리자 추가
         관리자 목록
+        관리자 추가
+        관리자 삭제
     ===========================================================
     ''')
 
@@ -35,7 +38,9 @@ def user_manual():
         2. 계좌 생성
         3. 입출금
         4. 잔고 확인
-        5. 관리자 모드
+        5. 계좌 비밀번호 변경
+        6. 사용자 닉네임 변경
+        7. 관리자 모드
         ''')
 
 
@@ -45,9 +50,9 @@ def admin_manual():
         1. 사용자 정보
         2. 계좌 정보
         3. 입출금 내역
-        4. 관리자 추가
-        5. 관리자 목록
-        6. 사용자 데이터 삭제
+        4. 관리자 목록
+        5. 관리자 추가
+        6. 사용자 정보 삭제
         7. 계좌 삭제
         8. 관리자 삭제
     ''')
@@ -65,37 +70,42 @@ class OpenDB:
         self.pw = '1939'
         self.withdraw = False  # 출금이 이루어질 때만 True로 바뀐다.
         self.deposit = False   # 입금이 이루어질 때만 True로 바뀐다.
+        self.cursor = object()
+        self.DB_connector = object()
 
+    def connect_db(self):
+        try:
+            self.DB_connector = mysql.connector.connect(host=self.host,
+                                                   database=self.DB,
+                                                   user=self.user,
+                                                   password=self.pw)
+            self.cursor = self.DB_connector.cursor()
+        except mysql.connector.Error as error:
+            print("Failed creating table into HBank DB {}".format(error))
+    def close_db(self):
+        self.DB_connector.commit()
     # table을 생성하는 함수
+
     def create_table(self, table_name):
         self.table = table_name
         # mysql모둘을 이용하여 DB에 접속
         try:
-            DB_connector = mysql.connector.connect(host=self.host,
-                                                   database=self.DB,
-                                                   user=self.user,
-                                                   password=self.pw)
-            cursor = DB_connector.cursor()
             # connect to DB
-            cursor.execute("DROP TABLE if exists " + self.table)
+            self.cursor.execute("DROP TABLE if exists " + self.table)
             # write query to create table
             table_query = []
             print("Input query to table: \n")
             table_query = input("msyql> ")
 
-            cursor.execute(table_query)
+            self.cursor.execute(table_query)
             print(self.table + " table is created...")
+            self.DB_connector.commit()
         except mysql.connector.Error as error:
             print("Failed creating table into HBank DB {}".format(error))
 
     # 사용자를 DB에 추가하는 함수
     def insert_user_to_db(self):
         try:
-            sql_connector = mysql.connector.connect(host=self.host,
-                                                    database=self.DB,
-                                                    user=self.user,
-                                                    password=self.pw)
-            cursor = sql_connector.cursor()
 
             SSN = input("주민번호를 입력하세요: ")
             # 이름 성 순서로 띄어쓰기로 입력하면 이름과 성이 따로 저장된다.
@@ -103,13 +113,12 @@ class OpenDB:
             Lname = Name[0]
             Fname = Name[1]
             Bdate = input("생년월일을 입력하세요: ")
-
+            NickName = input("닉네임을 설정하세요: ")
             sql = "insert into " + self.user_table + \
-                " values({},'{}','{}','{}');".format(SSN, Lname, Fname, Bdate)
+                " values({},'{}','{}','{}','{}');".format(SSN, Lname, Fname, Bdate, NickName)
 
-            cursor.execute(sql)
-            sql_connector.commit()
-
+            self.cursor.execute(sql)
+            self.DB_connector.commit()
             print("사용자 계정이 생성되었습니다.")
         except mysql.connector.Error as error:
             print("Failed inserting user data into User table {}".format(error))
@@ -117,26 +126,24 @@ class OpenDB:
     # 사용자가 계좌를 생성하는 함수
     def create_account_to_db(self):
         try:
-            sql_connector = mysql.connector.connect(host=self.host,
-                                                    database=self.DB,
-                                                    user=self.user,
-                                                    password=self.pw)
-            cursor = sql_connector.cursor()
-
             account = input("계좌번호를 입력하세요: ")
-            pw = input("암호를 설정하세요: ")
+            pw = input("비밀번호를 설정하세요: ")
             balance = input("돈을 넣어주세요: ")
             check_count = 1   # 주민번호 오류 횟수
             while check_count <= 3:
                 Ussn = int(input("주민번호를 입력하세요: "))
-                users = self.get_user_list(cursor)
-                users = list(users['SSN'].values)
+                sql_user_list = "Select * from User"
+                self.cursor.execute(sql_user_list)
+                user_data = self.cursor.fetchall()
+                column = ['SSN', 'Lname', 'Fname', 'Bdate','NickName']
+                user_data = pd.DataFrame(user_data, columns=column)
+                users = list(user_data['SSN'].values)
                 if Ussn in users:
                     sql = "insert into " + self.account + \
                         " values({}, {}, {}, {})".format(
                             account, balance, Ussn, pw)
-                    cursor.execute(sql)
-                    sql_connector.commit()
+                    self.cursor.execute(sql)
+                    self.DB_connector.commit()
                     print("계좌 생성이 완료되었습니다.")
                     return
                 else:
@@ -170,13 +177,8 @@ class OpenDB:
             print("Failed writing log into Log table {}".format(error))
 
     # 계좌 입출금을 수행하는 함수
-    def update_data(self, table):
+    def update_account(self, table):
         try:
-            sql_connector = mysql.connector.connect(host=self.host,
-                                                    database=self.DB,
-                                                    user=self.user,
-                                                    password=self.pw)
-            cursor = sql_connector.cursor()
             choose = int(input("입금 1, 출금 2: "))
             account = input("계좌번호를 입력하세요: ")
             login_count, i = 3, 1  # 세 번 이상 입력이 틀릴 경우 접속 제한
@@ -185,9 +187,9 @@ class OpenDB:
                 pw = getpass.getpass('비밀번호를 입력하세요:')
                 login_query = "Select PassWord, Balance from Account where AccNum = {}".format(
                     account)
-                cursor.execute(login_query)
+                self.cursor.execute(login_query)
                 # select로 데이터를 불러오는 경우 ([...],[,,,])형식이기에 [0]을 취하면 리스트만 남는다.
-                login = cursor.fetchall()[0]
+                login = self.cursor.fetchall()[0]
                 password = login[0]  # [password, balance]
                 if int(password) == int(pw):
                     balance = login[1]
@@ -212,18 +214,17 @@ class OpenDB:
                     print("잔고가 없습니다.")
                     return
                 self.withdraw = True
-            sql = "update " + table + \
-                " set Balance = {} where AccNum = {}".format(balance, account)
-            cursor.execute(sql)
+            sql = "update " + table + " Set Balance = {} where AccNum = {}".format(balance, account)
+            self.cursor.execute(sql)
             # 로그 테이블을 호출하여 입출금 내용을 자동으로 기록
-            self.write_log(cursor, account, cash)
-            sql_connector.commit()
+            self.write_log(self.cursor, account, cash)
             if self.deposit == True:
                 print("입금이 완료되었습니다. 현재 잔고는 {}원 입니다.".format(balance))
                 self.deposit = False
             else:
                 print("출금이 완료되었습니다. 현재 잔고는 {}입니다.".format(balance))
                 self.withdraw = False
+            self.DB_connector.commit()
             return
         except mysql.connector.Error as error:
             print("Failed updating data into Account table {}".format(error))
@@ -260,11 +261,67 @@ class OpenDB:
                     i += 1
 
         except mysql.connector.Error as error:
-            print("Failed fetching trained_words from MySQL table {}".format(error))
+            print("Failed checking balance from MySQL table {}".format(error))
             return
 
+    def password_update(self):
+        try:
+            account = input("계좌번호를 입력하세요: ")
+            counter, i = 3, 1
+            while i <= counter:
+                pw = getpass.getpass('비밀번호를 입력하세요:')
+                login_query = "Select PassWord, Balance from Account where AccNum = {}".format(
+                    account)
+                self.cursor.execute(login_query)
+                login = self.cursor.fetchall()
+                if bool(login):
+                    login = login[0]
+                else:
+                    print("계좌번호가 일치하지 않습니다.")
+                    return
+                if int(login[0]) == int(pw):
+                    new_pw = input("새로운 비밀번호 입력: ")
+                    pw_update = "update Account set PassWord = {} where AccNum = '{}'".format(new_pw, account)
+                    self.cursor.execute(pw_update)
+                    self.DB_connector.commit()
+                    print("비밀번호 재설정 완료!")
+                    return
+                else:
+                    print("비밀번호가 일치하지 않습니다. 남은 시도횟수 {}번".format(counter-i))
+                    i += 1
+
+        except mysql.connector.Error as error:
+            print("Failed update password from MySQL table {}".format(error))
+            return
+        
+    def change_nickname(self):
+        try:
+            ssn = input("주민번호를 입력하세요: ")
+            old_nick = input('기존 닉네임을 입력하세요:')
+            login_query = "Select NickName from User where SSN = {} and NickName = '{}'".format(
+                ssn, old_nick)
+            self.cursor.execute(login_query)
+            login = self.cursor.fetchall()
+            if bool(login):
+                login = login[0]
+            else:
+                print("해당 정보가 존재하지 않습니다.")
+                return
+
+            new_nick = input("새로운 닉네임 입력: ")
+            pw_update = "update User set NickName = '{}' where SSN = {}".format(
+                new_nick, ssn)
+            self.cursor.execute(pw_update)
+            self.DB_connector.commit()
+            print("닉네임 재설정 완료!")
+            return
+
+        except mysql.connector.Error as error:
+            print("Failed update NickName from MySQL table {}".format(error))
+            return
     ################################### Admin Mode ###################################
     # 관리자모드에서 전체 사용자 명단을 보게 하는 함수
+
     def get_user_list(self, cursor):
         sql_user_cnt = "select count(*) as cnt from User"
         cursor.execute(sql_user_cnt)
@@ -281,7 +338,7 @@ class OpenDB:
         sql_user_list = "Select * from User"
         cursor.execute(sql_user_list)
         user_data = cursor.fetchall()
-        column = ['SSN', 'Lname', 'Fname', 'Bdate']
+        column = ['SSN', 'Lname', 'Fname', 'Bdate','NickName']
         user_data = pd.DataFrame(user_data, columns=column)
         return user_data
 
@@ -438,7 +495,7 @@ def Admin_Mode(DB):
         return
     while True:
         admin_manual()
-        choose = int(input("choose one: "))
+        choose = int(input("원하는 관리자서비스 선택: "))
         if choose == 0:
             break
         elif choose == 1:
@@ -451,10 +508,10 @@ def Admin_Mode(DB):
             log = DB.get_log_data(cursor)
             print(log)
         elif choose == 4:
-            DB.add_admin_member(cursor)
-        elif choose == 5:
             admin_list = DB.print_admin_list(cursor)
             print(admin_list)
+        elif choose == 5:
+            DB.add_admin_member(cursor)
         elif choose == 6:
             DB.delete_user(cursor)
         elif choose == 7:
@@ -468,11 +525,12 @@ def Admin_Mode(DB):
 
 
 def main_func(DB):
-
+    DB.connect_db()
     while True:
         user_manual()
-        choose = int(input("choose one: "))
+        choose = int(input("원하는 서비스를 선택하세요: "))
         if choose == 0:
+            DB.close_db()
             print("서비스를 종료합니다.")
             time.sleep(1)
             break
@@ -481,15 +539,20 @@ def main_func(DB):
         elif choose == 2:
             DB.create_account_to_db()  # 계좌 생성
         elif choose == 3:
-            DB.update_data('Account')  # 입출금
+            DB.update_account('Account')  # 입출금
         elif choose == 4:
             DB.check_balance()  # 계좌 잔고
         elif choose == 5:
+            DB.password_update()
+        elif choose == 6:
+            DB.change_nickname()
+        elif choose == 7:
             Admin_Mode(DB)  # 관리자 모드
         else:
             print("잘못 선택하였습니다.")
 
 
 if __name__ == '__main__':
+
     bank = OpenDB()
     main_func(bank)
