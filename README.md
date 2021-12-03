@@ -9,3 +9,9 @@ Build a Bank System
   + Python
   + DataBase
   + AWS
+
+## Project Schedul
+  + 1주차 ER-Model을 이용한 스키마 디자인 및 Entity, Relational type 설정
+  + 2주차 ER-Model을 Relational Model로 변환 후 AWS RDS, MySQL 환결 설치
+  + 3주차 python을 이용한 애플리케이션 초기 구현
+  + 4주차 은행 시스템 애플리케이션 구현 완성 및 테스팅 진행
