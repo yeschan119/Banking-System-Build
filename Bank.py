@@ -17,6 +17,7 @@ print('''
         입출금
         잔고 확인
         비밀번호 변경
+        닉네임 변경
         
     관리자 모드
         전체 사용자목록 확인
@@ -54,20 +55,21 @@ def admin_manual():
         5. 관리자 추가
         6. 사용자 정보 삭제
         7. 계좌 삭제
-        8. 관리자 삭제
+        8. 로그 삭제
+        9. 관리자 삭제
     ''')
 
 
 class OpenDB:
     def __init__(self):
-        self.host = 'localhost'
+        self.host = 'db-1.cjfiturksrlr.ap-northeast-2.rds.amazonaws.com'
         self.DB = 'HBank'
         self.table = None
         self.user_table = 'User'
         self.account = 'Account'
         self.Log = 'Log'
-        self.user = 'HanYang'
-        self.pw = '1939'
+        self.user = 'yeschan'
+        self.pw = 'yeschan119'
         self.withdraw = False  # 출금이 이루어질 때만 True로 바뀐다.
         self.deposit = False   # 입금이 이루어질 때만 True로 바뀐다.
         self.cursor = object()
@@ -108,6 +110,13 @@ class OpenDB:
         try:
 
             SSN = input("주민번호를 입력하세요: ")
+            dup_check = "Select SSN from user where SSN = {}".format(SSN)
+            self.cursor.execute(dup_check)
+            dup_check = self.cursor.fetchall()
+            
+            if dup_check:
+                print("이미 존재하는 번호입니다.")
+                return
             # 이름 성 순서로 띄어쓰기로 입력하면 이름과 성이 따로 저장된다.
             Name = str(input("이름을 입력하세요: ")).split(' ')
             Lname = Name[0]
@@ -120,13 +129,22 @@ class OpenDB:
             self.cursor.execute(sql)
             self.DB_connector.commit()
             print("사용자 계정이 생성되었습니다.")
+            return
         except mysql.connector.Error as error:
             print("Failed inserting user data into User table {}".format(error))
+            return
 
     # 사용자가 계좌를 생성하는 함수
     def create_account_to_db(self):
         try:
             account = input("계좌번호를 입력하세요: ")
+            dup_check = "Select AccNum from Account where AccNum = {}".format(account)
+            self.cursor.execute(dup_check)
+            dup_check = self.cursor.fetchall()
+
+            if dup_check:
+                print("이미 존재하는 계좌입니다.")
+                return
             pw = input("비밀번호를 설정하세요: ")
             balance = input("돈을 넣어주세요: ")
             check_count = 1   # 주민번호 오류 횟수
@@ -166,11 +184,9 @@ class OpenDB:
             name = name[0] + ' ' + name[1]
             curdate = str(date.today())
             if self.withdraw == True:
-                sql = "insert into " + self.Log + "(Account, Name, Withdraw, Deposit, LogDate) values({}, '{}', {}, {},'{}')".format(account,
-                                                                                                                                     name, cash, '0', curdate)
+                sql = "insert into " + self.Log + "(Account, Name, Withdraw, Deposit, LogDate) values({}, '{}', {}, {},'{}')".format(account, name, cash, '0', curdate)
             else:
-                sql = "insert into " + self.Log + "(Account, Name, Withdraw, Deposit, LogDate) values({}, '{}', {}, {},'{}')".format(account,
-                                                                                                                                     name, '0', cash, curdate)
+                sql = "insert into " + self.Log + "(Account, Name, Withdraw, Deposit, LogDate) values({}, '{}', {}, {},'{}')".format(account, name, '0', cash, curdate)
             cursor.execute(sql)
             print("Log data has recorded.")
         except mysql.connector.Error as error:
@@ -424,6 +440,13 @@ class OpenDB:
     # 관리자를 추가해주는 함수
     def add_admin_member(self, cursor):
         ID = input("아이디 혹은 이메일주소 입력: ")
+        dup_check = "Select Admin_ID from Admin where Admin_ID = '{}'".format(ID)
+        cursor.execute(dup_check)
+        dup_check = cursor.fetchall()
+
+        if dup_check:
+            print("이미 존재하는 아이디입니다.")
+            return
         PW = input("비밀번호 입력: ")
         sql = "insert into Admin values('{}', {})".format(ID, PW)
         cursor.execute(sql)
@@ -453,7 +476,12 @@ class OpenDB:
             print("일치하는 관리자 데이터가 존재하지 않습니다.")
             return
 
-
+    def delete_log(self, cursor):
+        account = input("계좌번호 입력: ")
+        sql = "Delete from Log where Account = {}".format(account)
+        cursor.execute(sql)
+        print("로그 데이터를 삭제하였습니다.")
+        
 def create_table(DB):
     table_name = input("Insert table name: ")
     DB.create_table(table_name)
@@ -463,10 +491,10 @@ def create_table(DB):
 
 def Admin_Mode(DB):
     try:
-        connector = mysql.connector.connect(host='localhost',
+        connector = mysql.connector.connect(host='db-1.cjfiturksrlr.ap-northeast-2.rds.amazonaws.com',
                                             database='HBank',
-                                            user='HanYang',
-                                            password='1939')
+                                            user='yeschan',
+                                            password='yeschan119')
         cursor = connector.cursor()
         sql = ("Select * from Admin")
         cursor.execute(sql)
@@ -517,6 +545,8 @@ def Admin_Mode(DB):
         elif choose == 7:
             DB.delete_account(cursor)
         elif choose == 8:
+            DB.delete_log(cursor)
+        elif choose == 9:
             DB.delete_admin(cursor)
         else:
             print("잘못 선택하였습니다.")
@@ -543,9 +573,9 @@ def main_func(DB):
         elif choose == 4:
             DB.check_balance()  # 계좌 잔고
         elif choose == 5:
-            DB.password_update()
+            DB.password_update() # 비밀번호 변경
         elif choose == 6:
-            DB.change_nickname()
+            DB.change_nickname() # 닉네임 변경
         elif choose == 7:
             Admin_Mode(DB)  # 관리자 모드
         else:
