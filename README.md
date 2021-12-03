@@ -1,5 +1,5 @@
 # Bank_System
-Build a Bank System
+Build a Banking System(은행 시스템 구현 프로젝트)
 ## purpose
   + 은행DB를 서버로 구축하고 은행시스템을 그대로 구현할 수 있는 Bank System 개발
 ## members
