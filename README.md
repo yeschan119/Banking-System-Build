@@ -20,4 +20,4 @@ Build a Banking System
 
 ## 1주차 ER-Model & conceptual DB
   + ER-Model
-    !https://user-images.githubusercontent.com/83147205/144731198-c8eb0396-45c5-4077-b8ef-cfc45cc7c7f3.png
+   https://user-images.githubusercontent.com/83147205/144731198-c8eb0396-45c5-4077-b8ef-cfc45cc7c7f3.png
