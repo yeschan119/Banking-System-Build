@@ -33,4 +33,20 @@ Build a Banking System
     + Relationship type attributes: record, manag
  
  ## 2주차 Relational Model로 변환 후 AWS RDS, MySQL 설치
- 
+  + Logical DB
+  
+<img width="774" alt="스크린샷 2021-12-05 오전 1 09 19" src="https://user-images.githubusercontent.com/83147205/144731343-1f14a941-327a-4855-a94f-a04e7033e8bd.png">
+
+  + 결과 테스팅 영상
+  + <iframe
+    width="640"
+    height="480"
+    src="https://youtu.be/NZsOyLqf7Js"
+    frameborder="0"
+    allow="autoplay; encrypted-media"
+    allowfullscreen
+    >
+    </iframe>
+
+
+
