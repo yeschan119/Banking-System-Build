@@ -21,3 +21,16 @@ Build a Banking System
 ## 1주차 ER-Model & conceptual DB
   + ER-Model 
 ![스크린샷 2021-12-05 오전 12 35 22](https://user-images.githubusercontent.com/83147205/144731232-042b9c3b-3e2b-4566-9db8-89077b49c6ed.png)
+  
+  + conceptual DB
+    + Entity type: User, Account, Admin, Log
+    + Relationship type: record, manage
+    + Entity type attrbitutes
+      + User: SSN, Lname, Fname, Bdate, NickName
+      + Account: AccNum, SSN, Balance, PassWord
+      + Admin: Email, PW
+      + Log: LogID, Name, Account, Withdraw, Deposit, LogDate
+    + Relationship type attributes: record, manag
+ 
+ ## 2주차 Relational Model로 변환 후 AWS RDS, MySQL 설치
+ 
